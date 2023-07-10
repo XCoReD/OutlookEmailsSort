@@ -33,7 +33,7 @@
     <PublishUrl>\\SRV-SUP-1033\SmartProject\Outlook\</PublishUrl>
     <InstallUrl>https://extresources.scnsoft.com/SmartProject/Outlook/</InstallUrl>
     <TargetCulture>en</TargetCulture>
-    <ApplicationVersion>1.0.0.17</ApplicationVersion>
+    <ApplicationVersion>1.0.0.18</ApplicationVersion>
     <AutoIncrementApplicationRevision>true</AutoIncrementApplicationRevision>
     <UpdateEnabled>true</UpdateEnabled>
     <UpdateInterval>1</UpdateInterval>

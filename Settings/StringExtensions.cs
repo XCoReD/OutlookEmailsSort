@@ -8,7 +8,6 @@ namespace SettingsUI
 {
     public static class StringExtensions
     {
-        //holywar
         //https://stackoverflow.com/questions/6219454/efficient-way-to-remove-all-whitespace-from-string
         public static string RemoveWhitespaces(this string input)
         {

@@ -27,6 +27,7 @@ namespace OutlookEmailsSort
 
         static HashSet<string> _exactMailFolders;
         static char[] _extraCharsInFolderName = new char[] { '(', '[' };
+        static char[] _addressesSeparators = new char[] { ';',',' };
         static StringBuilder _error = new StringBuilder();
 
         static List<string> _domainsToSkip = new List<string> { "scnsoft", "scnvision", "gmail", "yahoo", "hotmail", "msn", "outlook", "mail", "yandex" };
@@ -402,7 +403,7 @@ namespace OutlookEmailsSort
                 string historyFolder = null;
                 if (_senderHistory.TryGetValue(sender, out historyFolder))
                 {
-                    _folders.TryGetValue(historyFolder, out identifiedFolder);
+                    _folders.TryGetValue(historyFolder.ToLowerInvariant(), out identifiedFolder);
                 }
             }
 
@@ -534,7 +535,7 @@ namespace OutlookEmailsSort
                 var sender = GetSenderEmailAddress(mail);
                 try
                 {
-                    _senderHistory[sender] = folder.Path;
+                    _senderHistory[sender] = folder.Name;
                     SaveHistory();
                 }
                 catch (System.Exception ex)
@@ -562,14 +563,35 @@ namespace OutlookEmailsSort
 
         void FillFromAddress(HashSet<string> keywords, string addressLine)
         {
-            string[] addresses = addressLine.Split(';');
-            foreach(var addressItem in addresses)
+            string[] addresses = addressLine.Split(_addressesSeparators);
+            const string mailto = "mailto:";
+            char[] mailtoEnding = { '>'};
+            foreach (var addressItem in addresses)
             {
                 var address = addressItem.Trim();
-                int lq = address.IndexOf('<');
-                int rq = address.IndexOf('>');
-                if (lq != -1 && rq != -1)
-                    address = address.Substring(lq + 1, rq - lq - 1);
+
+                bool mailtoCut = false;
+                int mt = address.IndexOf(mailto);
+                if(mt != -1)
+                {
+                    int mtend = address.IndexOfAny(mailtoEnding);
+                    if(mtend != -1)
+                    {
+                        address = address.Substring(mt + mailto.Length, mtend - mt - mailto.Length);
+                        mailtoCut = true;
+                    }
+                }
+
+                if(!mailtoCut)
+                {
+                    int lq = address.IndexOf('<');
+                    if (lq != -1)
+                    {
+                        int rq = address.IndexOf('>', lq + 1);
+                        if (lq != -1 && rq != -1)
+                            address = address.Substring(lq + 1, rq - lq - 1);
+                    }
+                }
 
                 int a = address.IndexOf('@');
                 if (a == -1)
