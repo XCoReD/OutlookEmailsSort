@@ -55,7 +55,7 @@
             | System.Windows.Forms.AnchorStyles.Right)));
             this.treeFolders.Location = new System.Drawing.Point(22, 52);
             this.treeFolders.Name = "treeFolders";
-            this.treeFolders.Size = new System.Drawing.Size(342, 327);
+            this.treeFolders.Size = new System.Drawing.Size(407, 327);
             this.treeFolders.TabIndex = 0;
             this.treeFolders.AfterSelect += new System.Windows.Forms.TreeViewEventHandler(this.treeFolders_AfterSelect);
             this.treeFolders.KeyDown += new System.Windows.Forms.KeyEventHandler(this.treeFolders_KeyDown);
