@@ -30,7 +30,7 @@ namespace OutlookEmailsSort
         static char[] _addressesSeparators = new char[] { ';',',' };
         static StringBuilder _error = new StringBuilder();
 
-        static List<string> _domainsToSkip = new List<string> { "scnsoft", "scnvision", "gmail", "yahoo", "hotmail", "msn", "outlook", "mail", "yandex" };
+        static MyLog _log;
 
         const string PR_SMTP_ADDRESS =
     "http://schemas.microsoft.com/mapi/proptag/0x39FE001E";
@@ -47,25 +47,31 @@ namespace OutlookEmailsSort
         static void LoadSettings()
         {
             var path = Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments);
+
+            if (_log == null)
+                _log = new MyLog(path + "\\.outlookemailsort.log.txt", true, 3);
+
             _settingsFileName = path + "\\.outlookemailsort.settings.json";
             try
             {
                 var s = File.ReadAllText(_settingsFileName);
                 _settings = JsonConvert.DeserializeObject<Config>(s);
 
-                if(_settings.OutlookTargetFolder != "Inbox")
+                var startPath = _settings.OutlookTargetFolder != "Inbox" ? _settings.OutlookTargetFolder : "";
+                //if(_settings.OutlookTargetFolder != "Inbox")
                 {
                     _folders = new Dictionary<string, FolderInfo>();
                     _exactMailFolders = new HashSet<string>();
-                    InitFolders(_settings.OutlookTargetFolder);
+                    InitFolders(startPath);
 
                     _foldersPlain = new List<string>(_folders.Count);
                     foreach (var v in _folders)
                         _foldersPlain.Add(v.Key);
                 }
             }
-            catch (System.Exception)
+            catch (System.Exception ex)
             {
+                _log.Error("LoadSettings failed", ex);
                 _settings = GetDefaultSettings();
             }
 
@@ -79,12 +85,17 @@ namespace OutlookEmailsSort
             {
                 _senderHistory = new Dictionary<string, string>();
             }
-
         }
 
         static Config GetDefaultSettings()
         {
-            return new Config { MarkAsReadWhenMove = true, OutlookTargetFolder = "Inbox" };
+            return new Config 
+            { 
+                MarkAsReadWhenMove = true, 
+                OutlookTargetFolder = "Inbox", 
+                CorporateDomainsToSkip = new List<string> { "mycorporatedomain" },
+                PublicDomainsToSkip = new List<string> { "gmail", "yahoo", "hotmail", "msn", "outlook", "mail", "yandex" }
+            };
         }
         void SaveSettings()
         {
@@ -107,6 +118,7 @@ namespace OutlookEmailsSort
 
             if(_error.Length != 0)
             {
+                _log.Error("InitFolders: Duplicated names found: " + _error.ToString());
                 MessageBox.Show("Please resolve the issues below" + Environment.NewLine + Environment.NewLine + _error.ToString(), "Duplicated names found", MessageBoxButtons.OK, MessageBoxIcon.Warning);
             }
         }
@@ -253,7 +265,7 @@ namespace OutlookEmailsSort
 
         string SelectFolder()
         {
-            using(ConfigUI form = new ConfigUI(_settings, null, _folders))
+            using(ConfigUI form = new ConfigUI(_settings, null, _folders, _log))
             {
                 if (form.ShowDialog() != DialogResult.OK)
                     return null;
@@ -280,7 +292,9 @@ namespace OutlookEmailsSort
             if (mail.UnRead)
                 mail.UnRead = false;
 
-            if (MoveToFolder(mail, identifiedFolder, true))
+            var result = MoveToFolder(mail, identifiedFolder, true);
+            _log.Info("Archive to given folder: " + DumpMailInfo(mail) + " => " + identifiedFolder.Path + ": " + result);
+            if(!result)
                 return false;
 
             return true;
@@ -413,10 +427,17 @@ namespace OutlookEmailsSort
             if (mail.UnRead)
                 mail.UnRead = false;
 
-            if (!MoveToFolder(mail, identifiedFolder, false))
+            var result = MoveToFolder(mail, identifiedFolder, false);
+            _log.Info("Archive to given folder: " + DumpMailInfo(mail) + " => " + identifiedFolder.Path + ": " + result);
+            if(!result)
                 return false;
 
             return true;
+        }
+
+        static string DumpMailInfo(MailItem mail)
+        {
+            return $"SUBJ: {mail.Subject}, FROM: {mail.SenderName},{mail.SenderEmailAddress}, TO: {mail.To}, CC: {mail.CC}, sent on {mail.SentOn.ToString("yyyy-MM-dd HH:mm:ss")}";
         }
 
         FindFolderResult CheckInEmailChain(MailItem mail, ref FolderInfo identifiedFolder)
@@ -601,7 +622,7 @@ namespace OutlookEmailsSort
                 if (b == -1)
                     return;
                 string domain = address.Substring(a + 1, b - a - 1).ToLowerInvariant();
-                if (_domainsToSkip.Contains(domain))
+                if(_settings.CorporateDomainsToSkip.Contains(domain) || _settings.PublicDomainsToSkip.Contains(domain))
                     return;
 
                 string key = null;
@@ -623,7 +644,7 @@ namespace OutlookEmailsSort
             LoadSettings();
 
             OutlookTreeNode outlookTree = ReadFolders();
-            ConfigUI form = new ConfigUI(_settings, outlookTree, null);
+            ConfigUI form = new ConfigUI(_settings, outlookTree, null, _log);
             if(form.ShowDialog() == DialogResult.OK)
             {
                 SaveSettings();

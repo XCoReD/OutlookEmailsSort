@@ -1,12 +1,11 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Linq;
 using System.Text;
-using System.Threading.Tasks;
+using Nager.PublicSuffix;
 
 namespace SettingsUI
 {
-    public static class StringExtensions
+    public static class StringEx
     {
         //https://stackoverflow.com/questions/6219454/efficient-way-to-remove-all-whitespace-from-string
         public static string RemoveWhitespaces(this string input)
@@ -45,46 +44,28 @@ namespace SettingsUI
             return new String(newarr, 0, j);
         }
 
-        static string[] _1stLevelEnds = new string[]
-        {
-            ".com",
-            ".ru",
-            ".net",
-            ".org",
-            ".by",
-            ".com.by",
-            ".de",
-            ".fr",
-            ".it",
-            ".eu",
-            ".uk",
-            ".co.uk",
-            ".in",
-            ".us",
-            ".ua",
-            ".com.ua",
-            ".io",
-            ".biz",
-            ".media",
-            ".info",
-            ".name",
-            ".software",
-        };
         public static string RemoveDomain1stLevel(this string input)
         {
             int ip = input.LastIndexOf('.');
             if (ip == -1)
                 return input;
-            input = input.ToLowerInvariant();
-            foreach(var v in _1stLevelEnds)
+
+            if(domainParser == null)
             {
-                int i = input.LastIndexOf(v);
-                if (i != -1)
-                    return input.Substring(0, i);
+                domainParser = new DomainParser(new WebTldRuleProvider());
             }
-            return input;
+
+            var domainInfo = domainParser.Parse(input);
+            if (string.IsNullOrEmpty(domainInfo.TLD))
+                return input;
+
+            var tp = input.LastIndexOf(domainInfo.TLD);
+            if (tp <= 0)
+                return input;
+            return input.Substring(0, tp - 1);
         }
 
+        static DomainParser domainParser; 
 
     }
 }

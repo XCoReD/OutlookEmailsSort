@@ -20,11 +20,15 @@ namespace SettingsUI
         bool _initInProgress = true;
         bool _disableListFiltering = false;
         InputLanguage _original;
-        public ConfigUI(Config settings, OutlookTreeNode root, Dictionary<string, FolderInfo> folders)
+        MyLog _log;
+
+        public ConfigUI(Config settings, OutlookTreeNode root, Dictionary<string, FolderInfo> folders, MyLog log)
         {
             _settings = settings;
             _root = root;
             _folders = folders;
+            _log = log;
+
             InitializeComponent();
         }
 
@@ -32,6 +36,7 @@ namespace SettingsUI
         {
             if (_root != null)
             {
+                //configuration mode
                 treeFolders.Visible = true;
                 listFolders.Visible = false;
                 targetFolder.ReadOnly = true;
@@ -46,9 +51,16 @@ namespace SettingsUI
 
                 checkBoxEnableMoveUnreadMails.Visible = true;
                 selectedTextItem.Visible = false;
+
+                textBoxCorporateEmails.Text = string.Join(Environment.NewLine, _settings.CorporateDomainsToSkip);
+                textBoxPublicEmails.Text = string.Join(Environment.NewLine, _settings.PublicDomainsToSkip);
+
+                labelSelectTargetFolder.Visible = false;
+
             }
             else
             {
+                //select folder mode
                 listFolders.Visible = true;
                 treeFolders.Visible = false;
                 targetFolder.ReadOnly = false;
@@ -61,10 +73,15 @@ namespace SettingsUI
                 FillFolders(null);
                 targetFolder.Focus();
 
-
                 checkBoxEnableMoveUnreadMails.Visible = false;
                 selectedTextItem.Visible = true;
 
+                textBoxCorporateEmailsLabel.Visible = false;
+                textBoxCorporateEmails.Visible = false;
+                textBoxPublicEmailsLabel.Visible = false;
+                textBoxPublicEmails.Visible = false;
+
+                labelSelectTargetFolder.Visible = true;
             }
         }
 
@@ -126,12 +143,19 @@ namespace SettingsUI
                 return _root == null;
             }
         }
+        static string[] _split = new string[] { Environment.NewLine, ",", ";" };
         private void buttonOK_Click(object sender, EventArgs e)
         {
             if (!FolderSelectMode)
             {
                 _settings.OutlookTargetFolder = targetFolder.Text;
                 _settings.MarkAsReadWhenMove = checkBoxEnableMoveUnreadMails.Checked;
+
+                _settings.CorporateDomainsToSkip.Clear();
+                _settings.CorporateDomainsToSkip.AddRange(textBoxCorporateEmails.Text.Split(_split, StringSplitOptions.RemoveEmptyEntries));
+
+                _settings.PublicDomainsToSkip.Clear();
+                _settings.PublicDomainsToSkip.AddRange(textBoxPublicEmails.Text.Split(_split, StringSplitOptions.RemoveEmptyEntries));
             }
         }
 
@@ -180,7 +204,7 @@ namespace SettingsUI
                 return;
 
             if (FolderSelectMode)
-                FillFolders(targetFolder.Text.ToLowerInvariant().RemoveWhitespaces());
+                FillFolders(StringEx.RemoveWhitespaces(targetFolder.Text.ToLowerInvariant()));
         }
 
         private void listFolders_DoubleClick(object sender, EventArgs e)
@@ -276,6 +300,11 @@ namespace SettingsUI
         private void linkLabel1_LinkClicked(object sender, LinkLabelLinkClickedEventArgs e)
         {
             System.Diagnostics.Process.Start("https://www.linkedin.com/in/dtrus/");
+        }
+
+        private void linkLabel2_LinkClicked(object sender, LinkLabelLinkClickedEventArgs e)
+        {
+            System.Diagnostics.Process.Start(_log.LogFileName);
         }
     }
 }

@@ -11,5 +11,9 @@ namespace SettingsUI
     {
         public string OutlookTargetFolder { get; set; }
         public bool MarkAsReadWhenMove { get; set; }
+
+        public List<string> PublicDomainsToSkip { get; set; }
+
+        public List<string> CorporateDomainsToSkip { get; set; }
     }
 }
